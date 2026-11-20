@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#174a3b">
+    <meta name="description" content="Estimate salary tax, monthly in-hand pay, and how your Indian CTC is allocated.">
+    <title>Salary / CTC Estimator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="./" aria-label="Salary CTC estimator home">
+        <span class="wordmark-mark" aria-hidden="true">₹</span>
+        <span>PAYCHECK / INDIA</span>
+      </a>
+      <div class="runtime" aria-live="polite">
+        <span class="runtime-dot" id="runtime-dot"></span>
+        <span id="runtime-status">Starting Python runtime…</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">SALARY STRUCTURE / TAX ESTIMATE</p>
+        <h1 id="page-title">Know where your CTC goes.</h1>
+        <p class="intro-copy">Compare estimated take-home pay under both regimes, then see the split between cash, retirement savings, tax, and employer costs.</p>
+        <div class="year-note">
+          <span class="note-mark" aria-hidden="true">!</span>
+          <p>Tax rates and limits are configurable assumptions and need verification for Tax Year 2026–27. This estimate is not tax advice or an ITR filing result.</p>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <form id="salary-form" novalidate>
+          <div class="form-heading">
+            <div>
+              <p class="eyebrow">YOUR NUMBERS</p>
+              <h2>Annual compensation</h2>
+            </div>
+            <button type="button" class="quiet-button" id="load-example">Load offer example</button>
+          </div>
+
+          <fieldset>
+            <legend><span class="step">01</span> Salary components</legend>
+            <p class="section-help">Use annual values from your offer letter or payroll. Leave unknown items at zero.</p>
+            <div class="field-grid">
+              <label class="field field-wide" for="ctc">
+                <span>Total annual CTC <b>*</b></span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="ctc" name="ctc" type="number" min="1" step="1" inputmode="decimal" required></span>
+              </label>
+              <label class="field" for="basic">
+                <span>Basic salary <b>*</b></span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="basic" name="basic" type="number" min="0" step="1" inputmode="decimal" required></span>
+              </label>
+              <label class="field" for="da">
+                <span>Dearness allowance (DA)</span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="da" name="da" type="number" min="0" step="1" value="0" inputmode="decimal"></span>
+              </label>
+              <label class="field" for="hra">
+                <span>House rent allowance (HRA)</span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="hra" name="hra" type="number" min="0" step="1" value="0" inputmode="decimal"></span>
+              </label>
+              <label class="field" for="other_taxable_allowances">
+                <span>Other cash allowances</span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="other_taxable_allowances" name="other_taxable_allowances" type="number" min="0" step="1" value="0" inputmode="decimal"></span>
+              </label>
+              <label class="field" for="bonus">
+                <span>Expected bonus / incentive</span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="bonus" name="bonus" type="number" min="0" step="1" value="0" inputmode="decimal"></span>
+              </label>
+              <label class="field" for="commission">
+                <span>Annual commission</span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="commission" name="commission" type="number" min="0" step="1" value="0" inputmode="decimal"></span>
+              </label>
+              <label class="field" for="hra_qualifying_commission">
+                <span>Commission qualifying for HRA <small>Subset of commission above</small></span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="hra_qualifying_commission" name="hra_qualifying_commission" type="number" min="0" step="1" value="0" inputmode="decimal"></span>
+              </label>
+              <label class="field" for="taxable_perquisites">
+                <span>Taxable non-cash perquisites <small>Per payroll / Form 16; exclude employer NPS</small></span>
+                <span class="money-input"><span aria-hidden="true">₹</span><input id="taxable_perquisites" name="taxable_perquisites" type="number" min="0" step="1" value="0" inputmode="decimal"></span>
+              </label>
+            </div>
+            <label class="check-row"><input name="da_counts_for_retirement" type="checkbox"><span>DA is included in the qualifying HRA salary base</span></label>
+          </fieldset>
+
+          <fieldset>
+            <legend><span class="step">02</span> Contributions &amp; employer costs</legend>
+            <p class="section-help">Separate employee deductions from employer contributions. Confirm amounts in your salary breakup or payroll.</p>
+            <div class="field-grid">
+              <label class="field" for="employee_pf"><span>Employee PF</span><span class="money-input"><span aria-hidden="true">₹</span><input id="employee_pf" name="employee_pf" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="employer_pf"><span>Employer PF</span><span class="money-input"><span aria-hidden="true">₹</span><input id="employer_pf" name="employer_pf" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="employee_nps"><span>Employee NPS</span><span class="money-input"><span aria-hidden="true">₹</span><input id="employee_nps" name="employee_nps" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="employer_nps"><span>Employer NPS</span><span class="money-input"><span aria-hidden="true">₹</span><input id="employer_nps" name="employer_nps" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="employer_nps_deduction"><span>Eligible employer NPS deduction <small>Confirmed amount; cannot exceed contribution</small></span><span class="money-input"><span aria-hidden="true">₹</span><input id="employer_nps_deduction" name="employer_nps_deduction" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="gratuity_ctc"><span>Gratuity provision in CTC</span><span class="money-input"><span aria-hidden="true">₹</span><input id="gratuity_ctc" name="gratuity_ctc" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="insurance_ctc"><span>Insurance / benefits cost in CTC</span><span class="money-input"><span aria-hidden="true">₹</span><input id="insurance_ctc" name="insurance_ctc" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="reimbursements_ctc"><span>Verified official-duty reimbursements in CTC</span><span class="money-input"><span aria-hidden="true">₹</span><input id="reimbursements_ctc" name="reimbursements_ctc" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="other_employer_costs"><span>Other employer-side costs</span><span class="money-input"><span aria-hidden="true">₹</span><input id="other_employer_costs" name="other_employer_costs" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend><span class="step">03</span> Tax details</legend>
+            <p class="section-help">Enter actual personal amounts and only exemptions or deductions you are eligible to claim.</p>
+            <div class="field-grid">
+              <label class="field" for="rent_paid"><span>Annual rent paid</span><span class="money-input"><span aria-hidden="true">₹</span><input id="rent_paid" name="rent_paid" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="professional_tax"><span>Professional tax actually deducted</span><span class="money-input"><span aria-hidden="true">₹</span><input id="professional_tax" name="professional_tax" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="other_old_regime_exemptions"><span>Other old-regime salary exemptions <small>Excluding HRA; payroll-confirmed</small></span><span class="money-input"><span aria-hidden="true">₹</span><input id="other_old_regime_exemptions" name="other_old_regime_exemptions" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="other_new_regime_exemptions"><span>New-regime salary exemptions <small>Payroll-confirmed; excluding HRA</small></span><span class="money-input"><span aria-hidden="true">₹</span><input id="other_new_regime_exemptions" name="other_new_regime_exemptions" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="other_80c"><span>Other eligible 80C <small>Excluding employee PF</small></span><span class="money-input"><span aria-hidden="true">₹</span><input id="other_80c" name="other_80c" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="other_old_regime_deductions"><span>Other old-regime deductions <small>Excluding 80C and employer NPS</small></span><span class="money-input"><span aria-hidden="true">₹</span><input id="other_old_regime_deductions" name="other_old_regime_deductions" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+              <label class="field" for="age_group"><span>Age group for old-regime slabs</span><select id="age_group" name="age_group"><option value="under60">Under 60</option><option value="60to79">60 to 79</option><option value="80plus">80 or above</option></select></label>
+              <label class="field" for="other_payroll_deductions"><span>Other employee payroll deductions</span><span class="money-input"><span aria-hidden="true">₹</span><input id="other_payroll_deductions" name="other_payroll_deductions" type="number" min="0" step="1" value="0" inputmode="decimal"></span></label>
+            </div>
+            <div class="check-grid">
+              <label class="check-row"><input name="is_metro_for_hra" type="checkbox"><span>Rented home in Delhi, Mumbai, Kolkata, or Chennai</span></label>
+              <label class="check-row"><input name="resident_individual" type="checkbox" checked><span>Resident individual for tax purposes</span></label>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button class="primary-button" id="calculate-button" type="submit" disabled>
+              <span>Calculate take-home</span><span aria-hidden="true">→</span>
+            </button>
+            <p id="form-error" class="form-error" role="alert"></p>
+          </div>
+        </form>
+
+        <section class="results" id="results" aria-labelledby="results-title" aria-live="polite" hidden>
+          <div class="results-heading">
+            <p class="eyebrow">YOUR ESTIMATE</p>
+            <h2 id="results-title">The take-home picture</h2>
+            <p id="result-summary" class="section-help"></p>
+          </div>
+          <div class="regime-grid" id="regime-results"></div>
+          <section class="sweep-section" aria-labelledby="sweep-title">
+            <div class="sweep-heading">
+              <div><p class="eyebrow">SCENARIO PLANNER</p><h3 id="sweep-title">If your CTC increases</h3></div>
+              <span class="sweep-tag">Same structure, scaled</span>
+            </div>
+            <p class="section-help">Rent, professional tax, personal deductions, and exemption claims stay fixed. Actual employer increments may be structured differently.</p>
+            <div class="table-scroll" id="sweep-tables"></div>
+          </section>
+          <p class="result-caveat">Estimate only. Tax-year rules are unverified assumptions; special-rate income and complete ITR calculations are not included.</p>
+        </section>
+      </div>
+    </main>
+    <footer class="site-footer">
+      <span>CALCULATIONS RUN LOCALLY IN YOUR BROWSER</span>
+      <span>Python estimator · Pyodide · GitHub Pages</span>
+    </footer>
+  </body>
+</html>
